@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitoring Barang Turun — NDC J3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#181B34;
+    --steel:#4F46E5;
+    --steel-dark:#3730A3;
+    --teal:#06B6D4;
+    --amber:#F59E0B;
+    --amber-bg:#FEF3E0;
+    --amber-line:#FBD38D;
+    --green:#10B981;
+    --green-bg:#E6FBF3;
+    --green-line:#9CE8C9;
+    --violet:#8B5CF6;
+    --violet-bg:#F1EDFC;
+    --violet-line:#D6C9F5;
+    --red:#EF4444;
+    --paper:#F6F5FC;
+    --card:#FFFFFF;
+    --line:#DFE4E6;
+    --muted:#66727A;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:'Inter',sans-serif;
+    background:var(--paper);
+    background-image:
+      linear-gradient(180deg, #ECEAFB 0%, var(--paper) 260px),
+      repeating-linear-gradient(90deg, rgba(79,70,229,.045) 0 1px, transparent 1px 64px);
+    min-height:100vh;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  body.body-lock{ overflow:hidden; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  header{
+    position:sticky; top:0; z-index:200;
+    padding:14px 20px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:rgba(246,245,252,.86);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  header::after{
+    content:''; position:absolute; left:0; right:0; bottom:-1px; height:2.5px;
+    background:linear-gradient(90deg, var(--steel), var(--teal), var(--green), var(--amber));
+  }
+  .brand{display:flex;align-items:center;gap:12px;min-width:0;}
+  .brand-photo{
+    height:44px; width:auto; max-width:170px; min-width:44px;
+    border-radius:10px; object-fit:contain; flex-shrink:0;
+    box-shadow:0 4px 12px -4px rgba(55,48,163,.35), 0 0 0 1.5px var(--line);
+    background:#ffffff; padding:5px 9px;
+  }
+  .brand-photo-fallback{ display:flex;align-items:center;justify-content:center; font-size:19px; width:44px;height:44px; padding:0; }
+  .brand-text{min-width:0;}
+  .brand h1{ font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; margin:0; line-height:1.2; letter-spacing:.2px; white-space:nowrap; }
+  .brand .eyebrow{ display:block; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:1.4px; text-transform:uppercase; color:var(--steel); font-weight:600; margin-bottom:1px; }
+  .header-right{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .conn-dot{
+    display:flex;align-items:center;gap:6px; font-size:11px;color:var(--muted);font-weight:600;
+    white-space:nowrap; font-family:'IBM Plex Mono',monospace; position:relative; top:-3px;
+    background:#fff; border:1px solid var(--line); padding:4px 10px; border-radius:20px;
+    box-shadow:0 2px 6px -3px rgba(18,33,58,.15);
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:#C7CFD3;transition:background .3s;flex-shrink:0;position:relative;}
+  .dot.live{background:var(--green);box-shadow:0 0 0 3px rgba(16,185,129,.22);}
+  .dot.live::after{ content:''; position:absolute; inset:-4px; border-radius:50%; border:1.5px solid var(--green); opacity:0; animation:connPing 1.8s ease-out infinite; }
+  @keyframes connPing{ 0%{ opacity:.7; transform:scale(.5); } 100%{ opacity:0; transform:scale(2.1); } }
+  .header-reset-btn{
+    width:36px;height:36px; border-radius:9px; border:1.5px solid #F0BABA; background:#FDF1F1; color:var(--red);
+    font-size:15px; display:flex;align-items:center;justify-content:center; cursor:pointer; flex-shrink:0;
+    transition:background .15s, transform .12s;
+  }
+  .header-reset-btn:hover{background:#FCE2E2;}
+  .header-reset-btn:active{transform:scale(.94);}
+
+  main{padding:20px 20px 100px; max-width:860px; margin:0 auto;}
+
+  .stats-strip{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px; }
+  .stat-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 14px; position:relative; overflow:hidden; cursor:pointer; transition:transform .12s, box-shadow .12s; text-align:left; }
+  .stat-card:hover{ transform:translateY(-2px); box-shadow:0 8px 18px -8px rgba(18,33,58,.25); }
+  .stat-card:active{ transform:translateY(0) scale(.98); }
+  .stat-card.pending{ background:linear-gradient(160deg, var(--amber-bg) 0%, #fff 75%); }
+  .stat-card.kosong{ background:linear-gradient(160deg, var(--violet-bg) 0%, #fff 75%); }
+  .stat-card.done{ background:linear-gradient(160deg, var(--green-bg) 0%, #fff 75%); }
+  .stat-card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:4px; }
+  .stat-card.pending::before{background:var(--amber);}
+  .stat-card.kosong::before{background:var(--violet);}
+  .stat-card.done::before{background:var(--green);}
+  .stat-num{ font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .stat-card.pending .stat-num{color:#B45309;}
+  .stat-card.kosong .stat-num{color:var(--violet);}
+  .stat-card.done .stat-num{color:var(--green);}
+  .stat-label{ display:block; margin-top:5px; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); font-weight:700; }
+
+  .section{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:18px; overflow:hidden; box-shadow:0 2px 10px -6px rgba(18,33,58,.08); scroll-margin-top:76px; }
+  .section.alert{ border-color:var(--violet-line); }
+  .section-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:15px 18px; border-bottom:1px solid var(--line); }
+  .section-head h2{ font-family:'Space Grotesk',sans-serif; font-size:14.5px; font-weight:700; margin:0; display:flex;align-items:center;gap:8px; letter-spacing:.2px; }
+  .section-head-actions{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .section-count{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap; }
+  .btn-fullscreen{
+    width:32px;height:32px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--muted);
+    display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;flex-shrink:0;
+    transition:background .15s,color .15s,transform .12s,border-color .15s;
+  }
+  .btn-fullscreen:hover{ background:var(--steel); border-color:var(--steel); color:#fff; transform:scale(1.06); }
+  .btn-fullscreen:active{ transform:scale(.92); }
+
+  /* ---- Fullscreen section mode (untuk layar laptop / TV) ---- */
+  .section.fullscreen-mode{
+    position:fixed; inset:0; z-index:500;
+    margin:0; border-radius:0; box-shadow:none;
+    width:100vw; height:100vh; max-width:none;
+    display:flex; flex-direction:column;
+    background:var(--card);
+  }
+  .section.fullscreen-mode .section-head{ padding:20px 34px; flex-shrink:0; }
+  .section.fullscreen-mode .section-head h2{ font-size:21px; gap:10px; }
+  .section.fullscreen-mode .section-count{ font-size:14px; }
+  .section.fullscreen-mode .btn-fullscreen{ width:38px;height:38px; font-size:18px; }
+  .section.fullscreen-mode .table-scroll{ flex:1; overflow-y:auto; }
+  .section.fullscreen-mode table{ font-size:16.5px; }
+  .section.fullscreen-mode thead th{ font-size:13px; padding:16px 34px; position:sticky; top:0; z-index:5; background:#FAFBFB; }
+  .section.fullscreen-mode tbody td{ padding:18px 34px; }
+  .section.fullscreen-mode td.col-koor{ font-size:18px; }
+  .section.fullscreen-mode .stamp, .section.fullscreen-mode .stamp-kosong{ font-size:13px; padding:6px 13px 6px 10px; }
+  .section.fullscreen-mode .checkbox{ width:46px;height:46px; border-width:3.5px; }
+  .section.fullscreen-mode .checkbox::after{ width:19px;height:12px; }
+  .section.fullscreen-mode .btn-kosong{ width:46px;height:46px; font-size:19px; }
+  .section.fullscreen-mode .btn-info{ padding:10px 18px; font-size:14px; }
+  .section.fullscreen-mode .badge-done-info{ font-size:13px; padding:7px 12px; }
+  .section.fullscreen-mode .refresh-note{ padding:14px 34px 20px; font-size:13px; }
+  .section.fullscreen-mode .empty{ padding:70px 20px; font-size:15px; }
+
+  .table-scroll{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  thead th{ text-align:left; font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); font-weight:700; padding:10px 18px; background:#FAFBFB; border-bottom:1px solid var(--line); white-space:nowrap; }
+  tbody td{ padding:12px 18px; border-bottom:1px solid #EEF1F2; vertical-align:middle; }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover td{background:#FAFCFD;}
+  td.col-koor{ font-family:'IBM Plex Mono',monospace; font-weight:600; letter-spacing:.3px; color:var(--ink); }
+  td.col-op{color:var(--muted);}
+  td.col-time{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted); white-space:nowrap; }
+  td.col-note{ color:var(--muted); font-size:12.5px; font-style:italic; }
+  td.col-aksi, th.th-aksi{ width:120px; text-align:center; }
+  td.col-status, th.th-status{ width:130px; text-align:center; }
+  td.col-info, th.th-info{ width:170px; text-align:center; }
+
+  .aksi-group{ display:flex; align-items:center; justify-content:center; gap:8px; }
+  .checkbox{
+    width:38px;height:38px; border-radius:10px; border:3px solid var(--amber);
+    background:linear-gradient(160deg, var(--amber-bg), #ffffff);
+    display:inline-flex;align-items:center;justify-content:center; cursor:pointer;
+    transition:transform .15s ease, border-color .2s, background .25s, box-shadow .25s;
+    position:relative; box-shadow:0 2px 7px -3px rgba(245,158,11,.5);
+    animation:checkboxBreathe 2.4s ease-in-out infinite;
+  }
+  @keyframes checkboxBreathe{ 0%,100%{ box-shadow:0 2px 7px -3px rgba(245,158,11,.5); } 50%{ box-shadow:0 2px 14px -1px rgba(245,158,11,.9); } }
+  .checkbox::before{ content:''; position:absolute; inset:-7px; border-radius:11px; background:var(--green); opacity:0; transform:scale(.4); pointer-events:none; }
+  .checkbox::after{ content:''; width:16px;height:10px; border-left:3.5px solid var(--amber); border-bottom:3.5px solid var(--amber); transform:rotate(-45deg) translateY(-2px); opacity:.6; transition:border-color .2s, opacity .2s; }
+  .checkbox:hover{ border-color:var(--green); background:linear-gradient(160deg, var(--green-bg), #ffffff); transform:scale(1.08); box-shadow:0 3px 9px -3px rgba(16,185,129,.5); }
+  .checkbox:hover::after{ border-color:var(--green); opacity:1; }
+  .checkbox:active{ transform:scale(.92); }
+  .checkbox.ripple::before{ animation:rippleOut .55s ease-out; }
+  @keyframes rippleOut{ 0%{ opacity:.4; transform:scale(.4); } 100%{ opacity:0; transform:scale(2); } }
+  .checkbox.success{ border-color:var(--green); background:linear-gradient(160deg, var(--green), #145C33); box-shadow:0 4px 12px -3px rgba(16,185,129,.55); animation:checkPop .45s ease; cursor:default; }
+  .checkbox.success::after{ border-color:#fff; opacity:1; width:17px;height:11px; }
+  @keyframes checkPop{ 0%{ transform:scale(1) rotate(0); } 35%{ transform:scale(1.35) rotate(10deg); } 60%{ transform:scale(.92) rotate(-6deg); } 100%{ transform:scale(1) rotate(0); } }
+
+  .btn-kosong{
+    width:38px;height:38px; border-radius:10px; border:2px solid var(--violet-line);
+    background:linear-gradient(160deg, var(--violet-bg), #ffffff);
+    display:inline-flex;align-items:center;justify-content:center; cursor:pointer;
+    font-size:16px; transition:transform .15s, border-color .2s, box-shadow .2s;
+  }
+  .btn-kosong:hover{ border-color:var(--violet); transform:scale(1.08); box-shadow:0 3px 9px -3px rgba(139,92,246,.5); }
+  .btn-kosong:active{ transform:scale(.92); }
+  .btn-kosong.success{ border-color:var(--violet); background:linear-gradient(160deg, var(--violet), #5B21B6); cursor:default; }
+
+  .stamp{
+    display:inline-flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+    font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--green);
+    border:1.5px dashed var(--green-line); background:var(--green-bg); padding:4px 9px 4px 7px; border-radius:5px; transform:rotate(-2.5deg);
+  }
+  .stamp-kosong{
+    display:inline-flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+    font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--violet);
+    border:1.5px dashed var(--violet-line); background:var(--violet-bg); padding:4px 9px 4px 7px; border-radius:5px; transform:rotate(-2.5deg);
+  }
+
+  .btn-info{
+    padding:7px 12px; border-radius:8px; border:1.5px solid var(--steel); background:#fff; color:var(--steel);
+    font-weight:700; font-size:11.5px; font-family:inherit; cursor:pointer; white-space:nowrap;
+  }
+  .btn-info:hover{ background:var(--steel); color:#fff; }
+  .badge-done-info{
+    display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:var(--steel-dark);
+    background:#EEF2FF; border:1px solid #C7D2FE; padding:5px 10px; border-radius:8px;
+  }
+
+  .empty{ text-align:center; padding:34px 20px; color:var(--muted); font-size:13px; }
+  .empty .emoji{font-size:22px;display:block;margin-bottom:6px;}
+
+  .refresh-note{ text-align:center;font-size:11px;color:var(--muted); padding:11px 18px 15px; border-top:1px solid #EEF1F2; font-family:'IBM Plex Mono',monospace; }
+
+  @media (max-width:640px){
+    thead{ display:none; }
+    tbody, tr, td{ display:block; width:100%; }
+    tbody tr{ padding:12px 16px; border-bottom:1px solid #EEF1F2; }
+    tbody td{ display:flex; justify-content:space-between; align-items:center; padding:5px 0; border:none; gap:10px; }
+    tbody td.col-koor{ font-size:15px; padding-top:2px; }
+    tbody td::before{ content:attr(data-label); font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); font-weight:700; font-family:'Inter',sans-serif; flex-shrink:0; }
+    td.col-aksi, td.col-status, td.col-info{ justify-content:flex-end; }
+    .stats-strip{ grid-template-columns:repeat(3,1fr); gap:8px; }
+    .stat-card{ padding:11px 10px; }
+    .stat-num{ font-size:22px; }
+    header{ flex-wrap:wrap; row-gap:10px; padding:12px 16px; }
+    .brand{ width:100%; }
+    .brand h1{ font-size:14.5px; }
+    .brand .eyebrow{ font-size:10px; }
+    .header-right{ width:100%; justify-content:space-between; margin-left:0; }
+    .conn-dot{ top:0; }
+  }
+
+  .toast-wrap{ position:fixed; top:16px;left:50%; transform:translateX(-50%); z-index:999; display:flex;flex-direction:column;gap:8px; width:calc(100% - 32px); max-width:420px; }
+  .toast{ background:linear-gradient(135deg,var(--green),#166B3E); color:#fff; padding:14px 16px; border-radius:12px; font-size:13.5px; font-weight:600; display:flex;align-items:center;gap:10px; box-shadow:0 10px 24px -6px rgba(16,185,129,.45); animation:toastLife 1.5s ease forwards; }
+  .toast.violet{ background:linear-gradient(135deg,var(--violet),#5B21B6); box-shadow:0 10px 24px -6px rgba(139,92,246,.45); }
+  @keyframes toastLife{ 0%{opacity:0;transform:translateY(-12px);} 12%{opacity:1;transform:translateY(0);} 78%{opacity:1;transform:translateY(0);} 100%{opacity:0;transform:translateY(-10px);} }
+
+  .pin-overlay{ position:fixed; inset:0; background:rgba(18,33,58,.55); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+  .pin-card{ background:#fff; border-radius:16px; padding:26px 22px; width:100%; max-width:320px; text-align:center; box-shadow:0 20px 40px -10px rgba(18,33,58,.35); }
+  .pin-card .lock-icon{font-size:28px;margin-bottom:6px;}
+  .pin-card h3{ font-family:'Space Grotesk',sans-serif; font-size:16px;margin:0 0 4px; }
+  .pin-card p{ font-size:12.5px;color:var(--muted);margin:0 0 16px; }
+  .pin-input{ width:100%; padding:14px; border:1.5px solid var(--line); border-radius:10px; font-size:22px; letter-spacing:8px; text-align:center; font-family:'IBM Plex Mono',monospace; background:#FAFBFD; margin-bottom:10px; }
+  .pin-input:focus{outline:none;border-color:var(--steel);}
+  .pin-error{ color:var(--red); font-size:12px; font-weight:600; margin-bottom:10px; min-height:16px; }
+  .pin-actions{display:flex;gap:10px;}
+  .pin-actions button{ flex:1; padding:12px; border-radius:10px; font-weight:700; font-size:13.5px; font-family:inherit; cursor:pointer; border:none; }
+  .pin-cancel{background:#F1F5F9;color:var(--ink);}
+  .pin-submit{background:linear-gradient(135deg,var(--steel),var(--teal));color:#fff;}
+  .confirm-card .lock-icon{color:var(--red);}
+  .confirm-card h3{color:var(--red);}
+  .pin-submit.danger{background:linear-gradient(135deg,#DC2626,#991B1B);}
+  .reset-check-row{ display:flex;align-items:flex-start;gap:8px; text-align:left; font-size:12px;color:var(--ink); background:#FDF1F1; border:1px solid #F0BABA; border-radius:10px; padding:10px 12px; margin-bottom:14px; }
+  .reset-check-row input{margin-top:2px;}
+
+  .locked-screen{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:90px 24px; color:var(--muted); }
+  .locked-screen .icon{font-size:34px;margin-bottom:10px;}
+  .locked-screen h2{ font-family:'Space Grotesk',sans-serif; color:var(--ink); font-size:16px; margin:0 0 6px; }
+  .locked-screen button{ margin-top:16px; padding:12px 22px; border:none; border-radius:10px; background:linear-gradient(135deg,var(--steel),var(--teal)); color:#fff; font-weight:700; font-size:13.5px; font-family:inherit; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<header>
+  <div class="brand">
+    <img class="brand-photo" id="brandPhoto" src="https://i.supaimg.com/2c2fe634-0778-4567-93bf-17d826ecd3d2/e4900ba3-8057-48fa-9cdc-1b7156152490.png" alt="Logo Paragon" referrerpolicy="no-referrer" loading="eager" onerror="this.outerHTML='&lt;div class=&quot;brand-photo brand-photo-fallback&quot;&gt;📦&lt;/div&gt;'">
+    <div class="brand-text">
+      <span class="eyebrow">NDC J3</span>
+      <h1>Monitoring Barang Turun</h1>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="conn-dot"><span class="dot" id="connDot"></span><span id="connLabel">menghubungkan...</span><span id="lastSyncLabel" style="opacity:.75;"></span></div>
+    <button type="button" class="header-reset-btn" id="btnHeaderReset" title="Reset semua data" style="display:none;" onclick="attemptResetAccess()">🗑️</button>
+  </div>
+</header>
+
+<div class="pin-overlay" id="pinOverlay" style="display:none;">
+  <div class="pin-card">
+    <div class="lock-icon">🔒</div>
+    <h3>Akses Monitoring</h3>
+    <p>Menu ini khusus untuk yang berwenang. Masukkan kode akses.</p>
+    <input type="password" inputmode="numeric" maxlength="4" class="pin-input" id="pinInput" placeholder="••••" onkeydown="if(event.key==='Enter')submitPin()">
+    <div class="pin-error" id="pinError"></div>
+    <div class="pin-actions">
+      <button class="pin-cancel" onclick="closePinModal()">Batal</button>
+      <button class="pin-submit" onclick="submitPin()">Buka</button>
+    </div>
+  </div>
+</div>
+
+<div class="pin-overlay" id="resetOverlay" style="display:none;">
+  <div class="pin-card confirm-card">
+    <div class="lock-icon">⚠️</div>
+    <h3>Hapus SEMUA Data?</h3>
+    <p>Tindakan ini akan menghapus <strong>seluruh baris data</strong> di spreadsheet (belum turun, rak kosong, maupun sudah turun) dan <strong>tidak bisa dibatalkan</strong>.</p>
+    <div class="reset-check-row">
+      <input type="checkbox" id="resetCheckbox" onchange="document.getElementById('resetConfirmBtn').disabled = !this.checked;">
+      <label for="resetCheckbox" style="margin:0;font-weight:600;color:var(--ink);">Saya paham dan yakin ingin menghapus semua data</label>
+    </div>
+    <div class="pin-actions">
+      <button class="pin-cancel" onclick="closeResetModal()">Batal</button>
+      <button class="pin-submit danger" id="resetConfirmBtn" disabled onclick="confirmReset()">Hapus Semua</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div id="lockedScreen" class="locked-screen" style="display:none;">
+    <div class="icon">🔒</div>
+    <h2>Akses Terkunci</h2>
+    <p>Masukkan kode akses untuk membuka halaman monitoring ini.</p>
+    <button onclick="openPinModal()">Masukkan Kode Akses</button>
+  </div>
+
+  <div id="monitorContent" style="display:none;">
+
+    <div class="stats-strip">
+      <div class="stat-card pending" onclick="scrollToSection('sectionBelum')">
+        <span class="stat-num" id="statBelum">0</span>
+        <span class="stat-label">Belum Turun</span>
+      </div>
+      <div class="stat-card kosong" onclick="scrollToSection('sectionKosong')">
+        <span class="stat-num" id="statKosong">0</span>
+        <span class="stat-label">Rak Kosong</span>
+      </div>
+      <div class="stat-card done" onclick="scrollToSection('sectionSudah')">
+        <span class="stat-num" id="statSudah">0</span>
+        <span class="stat-label">Sudah Turun</span>
+      </div>
+    </div>
+
+    <div class="section" id="sectionSudah">
+      <div class="section-head">
+        <h2>✅ Sudah Turun</h2>
+        <div class="section-head-actions">
+          <span class="section-count" id="monSudahCount">0 baris</span>
+          <button type="button" class="btn-fullscreen" id="fsBtn-sectionSudah" title="Layar penuh" onclick="toggleSectionFullscreen('sectionSudah')">⛶</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Koordinat</th><th>Operator</th><th>Waktu</th><th class="th-status">Status</th></tr>
+          </thead>
+          <tbody id="monSudahBody">
+            <tr><td colspan="4"><div class="empty">Memuat data...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="sectionBelum">
+      <div class="section-head">
+        <h2>⏳ Belum Turun</h2>
+        <div class="section-head-actions">
+          <span class="section-count" id="monBelumCount">0 baris</span>
+          <button type="button" class="btn-fullscreen" id="fsBtn-sectionBelum" title="Layar penuh" onclick="toggleSectionFullscreen('sectionBelum')">⛶</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Koordinat</th><th>Operator</th><th>Waktu</th><th class="th-aksi">Aksi</th></tr>
+          </thead>
+          <tbody id="monBelumBody">
+            <tr><td colspan="4"><div class="empty">Memuat data...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="refresh-note">✅ = sudah turun &nbsp;·&nbsp; ❌ = rak kosong (barang tidak ada)</div>
+    </div>
+
+    <div class="section alert" id="sectionKosong">
+      <div class="section-head">
+        <h2>❌ Rak Kosong — Perlu Info ke Picking</h2>
+        <div class="section-head-actions">
+          <span class="section-count" id="monKosongCount">0 baris</span>
+          <button type="button" class="btn-fullscreen" id="fsBtn-sectionKosong" title="Layar penuh" onclick="toggleSectionFullscreen('sectionKosong')">⛶</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Koordinat</th><th>Operator</th><th>Waktu</th><th>Catatan</th><th class="th-info">Info Picking</th></tr>
+          </thead>
+          <tbody id="monKosongBody">
+            <tr><td colspan="5"><div class="empty">Memuat data...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="refresh-note">Tandai "Sudah Diinfokan" setelah tim Picking tahu lokasi ini kosong</div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+/* ============================================================
+   Aplikasi AKSI: ceklis Sudah Turun / Rak Kosong, PIN-gated.
+   Field data per baris (dari GET API):
+   row, koordinat, operator, timestamp, belumTurun, sudahTurun,
+   rakKosong, catatanKosong, infoPicking
+   ============================================================ */
+const API_URL = "https://script.google.com/macros/s/AKfycbz_INpq25pf_TH9Z-OCjxQ32fEgCBe04_PDy9D0D-mCaTQaTWojNvje8xGGkFtA3ftYAQ/exec";
+
+const POLL_MS = 1500;
+const MONITOR_PIN = '6789';
+let pendingPinAction = 'monitor';
+let lastMonitorData = [];
+let pendingStatus = new Map();   // row -> {status:'SUDAH'|'KOSONG', ts}
+let pendingSnapshot = new Map();
+let pendingInfo = new Set();     // row -> optimistik infoPicking diklik
+
+function isSudah(d){ return (d.sudahTurun||'').toString().trim() !== ''; }
+function isKosong(d){ return (d.rakKosong||'').toString().trim() !== ''; }
+function isBelum(d){ return !isSudah(d) && !isKosong(d) && (d.belumTurun||'').toString().trim() !== ''; }
+function isInfoed(d){ return (d.infoPicking||'').toString().trim() !== '' || pendingInfo.has(d.row); }
+
+function mergeWithPending(data){
+  return data.map(d => {
+    let out = d;
+    if(pendingStatus.has(d.row) && !isSudah(d) && !isKosong(d)){
+      const p = pendingStatus.get(d.row);
+      out = p.status === 'SUDAH'
+        ? { ...out, sudahTurun:p.ts, rakKosong:'', belumTurun:'' }
+        : { ...out, rakKosong:p.ts, sudahTurun:'', belumTurun:'', catatanKosong: p.catatan || out.catatanKosong };
+    }
+    return out;
+  });
+}
+
+function setConn(ok){
+  document.getElementById('connDot').classList.toggle('live', ok);
+  document.getElementById('connLabel').textContent = ok ? 'tersambung' : 'terputus';
+  const syncLabel = document.getElementById('lastSyncLabel');
+  if(ok){
+    const now = new Date();
+    syncLabel.textContent = ' · ' + now.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+}
+
+function showToast(msg, violet){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast' + (violet ? ' violet' : '');
+  el.innerHTML = `<span>${violet ? '❌' : '✅'}</span><span>${msg}</span>`;
+  wrap.appendChild(el);
+  el.addEventListener('animationend', () => el.remove());
+}
+
+function scrollToSection(id){
+  const el = document.getElementById(id);
+  if(el){ el.scrollIntoView({ behavior:'smooth', block:'start' }); }
+}
+
+/* ---- Fullscreen per-section (untuk laptop / TV) ---- */
+const FS_SECTION_IDS = ['sectionSudah','sectionBelum','sectionKosong'];
+
+function toggleSectionFullscreen(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const wasFull = el.classList.contains('fullscreen-mode');
+
+  // tutup dulu semua section yang sedang fullscreen
+  FS_SECTION_IDS.forEach(sid => {
+    const s = document.getElementById(sid);
+    if(s) s.classList.remove('fullscreen-mode');
+  });
+  document.body.classList.remove('body-lock');
+
+  if(!wasFull){
+    el.classList.add('fullscreen-mode');
+    document.body.classList.add('body-lock');
+  }
+  updateFsButtons();
+}
+
+function exitAllFullscreen(){
+  FS_SECTION_IDS.forEach(sid => {
+    const s = document.getElementById(sid);
+    if(s) s.classList.remove('fullscreen-mode');
+  });
+  document.body.classList.remove('body-lock');
+  updateFsButtons();
+}
+
+function updateFsButtons(){
+  FS_SECTION_IDS.forEach(sid => {
+    const el = document.getElementById(sid);
+    const btn = document.getElementById('fsBtn-' + sid);
+    if(!el || !btn) return;
+    const isFull = el.classList.contains('fullscreen-mode');
+    btn.textContent = isFull ? '✕' : '⛶';
+    btn.title = isFull ? 'Tutup layar penuh' : 'Layar penuh';
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){
+    const anyFull = FS_SECTION_IDS.some(sid => document.getElementById(sid)?.classList.contains('fullscreen-mode'));
+    if(anyFull) exitAllFullscreen();
+  }
+});
+
+function checkAccess(){
+  if(sessionStorage.getItem('monUnlocked') === '1'){
+    document.getElementById('lockedScreen').style.display = 'none';
+    document.getElementById('monitorContent').style.display = 'block';
+    document.getElementById('btnHeaderReset').style.display = 'flex';
+    startMonitor();
+  } else {
+    document.getElementById('lockedScreen').style.display = 'flex';
+    document.getElementById('monitorContent').style.display = 'none';
+    document.getElementById('btnHeaderReset').style.display = 'none';
+  }
+}
+
+function openPinModal(){
+  pendingPinAction = pendingPinAction || 'monitor';
+  document.getElementById('pinError').textContent = '';
+  document.getElementById('pinInput').value = '';
+  document.getElementById('pinOverlay').style.display = 'flex';
+  setTimeout(()=>document.getElementById('pinInput').focus(), 50);
+}
+function closePinModal(){ document.getElementById('pinOverlay').style.display = 'none'; }
+
+function submitPin(){
+  const val = document.getElementById('pinInput').value.trim();
+  if(val === MONITOR_PIN){
+    sessionStorage.setItem('monUnlocked', '1');
+    closePinModal();
+    checkAccess();
+    if(pendingPinAction === 'reset'){ openResetModal(); }
+    pendingPinAction = 'monitor';
+  } else {
+    document.getElementById('pinError').textContent = 'Kode salah, coba lagi';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+  }
+}
+
+function attemptResetAccess(){
+  pendingPinAction = 'reset';
+  if(sessionStorage.getItem('monUnlocked') === '1'){ openResetModal(); return; }
+  openPinModal();
+}
+
+async function apiGet(){
+  const res = await fetch(API_URL, { method:'GET' });
+  const json = await res.json();
+  return Array.isArray(json.data) ? json.data : [];
+}
+async function apiPost(body){
+  const res = await fetch(API_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+  return res.json();
+}
+
+function formatTime(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d)) return iso;
+  return d.toLocaleString('id-ID', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function buildBelumRow(d){
+  return `
+    <tr>
+      <td class="col-koor" data-label="Koordinat">${escapeHtml(d.koordinat)}</td>
+      <td class="col-op" data-label="Operator">${d.operator ? escapeHtml(d.operator) : '—'}</td>
+      <td class="col-time" data-label="Waktu">${formatTime(d.timestamp)}</td>
+      <td class="col-aksi" data-label="Aksi">
+        <div class="aksi-group">
+          <div class="checkbox" title="Sudah turun" onclick="markStatus(${d.row}, 'SUDAH', this)"></div>
+          <div class="btn-kosong" title="Rak kosong" onclick="markStatus(${d.row}, 'KOSONG', this)">❌</div>
+        </div>
+      </td>
+    </tr>`;
+}
+
+function buildKosongRow(d){
+  const infoed = isInfoed(d);
+  return `
+    <tr>
+      <td class="col-koor" data-label="Koordinat">${escapeHtml(d.koordinat)}</td>
+      <td class="col-op" data-label="Operator">${d.operator ? escapeHtml(d.operator) : '—'}</td>
+      <td class="col-time" data-label="Waktu">${formatTime(d.rakKosong || d.timestamp)}</td>
+      <td class="col-note" data-label="Catatan">${d.catatanKosong ? escapeHtml(d.catatanKosong) : '—'}</td>
+      <td class="col-info" data-label="Info Picking">
+        ${infoed
+          ? '<span class="badge-done-info">✓ Sudah Diinfokan</span>'
+          : `<button type="button" class="btn-info" onclick="markInfoPicking(${d.row}, this)">Info ke Picking</button>`}
+      </td>
+    </tr>`;
+}
+
+function buildSudahRow(d){
+  return `
+    <tr>
+      <td class="col-koor" data-label="Koordinat">${escapeHtml(d.koordinat)}</td>
+      <td class="col-op" data-label="Operator">${d.operator ? escapeHtml(d.operator) : '—'}</td>
+      <td class="col-time" data-label="Waktu">${formatTime(d.timestamp)}</td>
+      <td class="col-status" data-label="Status"><span class="stamp">✓ Selesai</span></td>
+    </tr>`;
+}
+
+function animateStat(id, target){
+  const el = document.getElementById(id);
+  const start = Number(el.textContent) || 0;
+  if(start === target){ el.textContent = target; return; }
+  const steps = Math.min(Math.abs(target-start), 20) || 1;
+  const inc = (target - start) / steps;
+  let cur = start, i = 0;
+  clearInterval(el._animTimer);
+  el._animTimer = setInterval(() => {
+    i++; cur += inc;
+    if(i >= steps){ el.textContent = target; clearInterval(el._animTimer); }
+    else el.textContent = Math.round(cur);
+  }, 16);
+}
+
+function renderMonitorLists(){
+  const belumBody = document.getElementById('monBelumBody');
+  const kosongBody = document.getElementById('monKosongBody');
+  const sudahBody = document.getElementById('monSudahBody');
+  const belum = lastMonitorData.filter(isBelum);
+  const kosong = lastMonitorData.filter(isKosong);
+  const sudah = lastMonitorData.filter(isSudah);
+
+  document.getElementById('monBelumCount').textContent = belum.length + ' baris';
+  document.getElementById('monKosongCount').textContent = kosong.length + ' baris';
+  document.getElementById('monSudahCount').textContent = sudah.length + ' baris';
+  animateStat('statBelum', belum.length);
+  animateStat('statKosong', kosong.length);
+  animateStat('statSudah', sudah.length);
+
+  belumBody.innerHTML = belum.length === 0
+    ? '<tr><td colspan="4"><div class="empty"><span class="emoji">🎉</span>Semua barang sudah ditindaklanjuti</div></td></tr>'
+    : belum.map(buildBelumRow).join('');
+
+  kosongBody.innerHTML = kosong.length === 0
+    ? '<tr><td colspan="5"><div class="empty"><span class="emoji">👍</span>Tidak ada rak kosong</div></td></tr>'
+    : kosong.slice(-50).map(buildKosongRow).join('');
+
+  sudahBody.innerHTML = sudah.length === 0
+    ? '<tr><td colspan="4"><div class="empty"><span class="emoji">📋</span>Belum ada yang selesai</div></td></tr>'
+    : sudah.slice(-50).map(buildSudahRow).join('');
+}
+
+async function renderMonitor(){
+  if(sessionStorage.getItem('monUnlocked') !== '1') return;
+  try{
+    const data = await apiGet();
+    setConn(true);
+    lastMonitorData = mergeWithPending(data);
+    renderMonitorLists();
+  } catch(err){
+    setConn(false);
+    document.getElementById('monBelumBody').innerHTML = '<tr><td colspan="4"><div class="empty">Tidak bisa memuat data. Cek URL API / koneksi.</div></td></tr>';
+    document.getElementById('monKosongBody').innerHTML = '';
+    document.getElementById('monSudahBody').innerHTML = '';
+  }
+}
+
+async function markStatus(row, status, el){
+  let catatan = '';
+  if(status === 'KOSONG'){
+    catatan = prompt('Catatan tambahan (opsional), misal: "sudah dicek 2x, benar kosong"') || '';
+  }
+
+  el.classList.add('ripple', 'success');
+  el.onclick = null;
+  showToast(status === 'SUDAH' ? 'Ditandai sudah turun' : 'Ditandai rak kosong', status === 'KOSONG');
+
+  const idx = lastMonitorData.findIndex(d => d.row === row);
+  if(idx === -1) return;
+
+  pendingSnapshot.set(row, { ...lastMonitorData[idx] });
+  const stamp = new Date().toISOString();
+  pendingStatus.set(row, { status, ts: stamp, catatan });
+  lastMonitorData[idx] = status === 'SUDAH'
+    ? { ...lastMonitorData[idx], sudahTurun: stamp, rakKosong:'', belumTurun:'' }
+    : { ...lastMonitorData[idx], rakKosong: stamp, catatanKosong: catatan, sudahTurun:'', belumTurun:'' };
+
+  setTimeout(() => { renderMonitorLists(); }, 260);
+
+  try{
+    const result = await apiPost({ action:'update', row, status: status.toLowerCase(), catatan });
+    if(result.success){
+      pendingStatus.delete(row);
+      pendingSnapshot.delete(row);
+    } else {
+      revertPendingRow(row);
+      renderMonitorLists();
+      alert('Gagal update: ' + (result.error||'unknown'));
+    }
+  } catch(err){
+    revertPendingRow(row);
+    renderMonitorLists();
+    alert('Tidak bisa menghubungi spreadsheet.');
+  }
+}
+
+function revertPendingRow(row){
+  const snap = pendingSnapshot.get(row);
+  const idx = lastMonitorData.findIndex(d => d.row === row);
+  if(idx > -1 && snap) lastMonitorData[idx] = snap;
+  pendingStatus.delete(row);
+  pendingSnapshot.delete(row);
+}
+
+async function markInfoPicking(row, btn){
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+  pendingInfo.add(row);
+  try{
+    const result = await apiPost({ action:'infoPicking', row });
+    if(result.success){
+      showToast('Ditandai sudah diinfokan ke Picking');
+      renderMonitor();
+    } else {
+      pendingInfo.delete(row);
+      alert('Gagal menandai: ' + (result.error||'unknown'));
+      renderMonitorLists();
+    }
+  } catch(err){
+    pendingInfo.delete(row);
+    alert('Tidak bisa menghubungi spreadsheet.');
+    renderMonitorLists();
+  }
+}
+
+function openResetModal(){
+  document.getElementById('resetCheckbox').checked = false;
+  document.getElementById('resetConfirmBtn').disabled = true;
+  document.getElementById('resetOverlay').style.display = 'flex';
+}
+function closeResetModal(){ document.getElementById('resetOverlay').style.display = 'none'; }
+
+async function confirmReset(){
+  const btn = document.getElementById('resetConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Menghapus...';
+  const snapshot = lastMonitorData;
+
+  lastMonitorData = [];
+  pendingStatus.clear();
+  pendingSnapshot.clear();
+  pendingInfo.clear();
+  renderMonitorLists();
+  closeResetModal();
+  showToast('Menghapus semua data...');
+
+  try{
+    const result = await apiPost({ action:'reset' });
+    if(result.success){ showToast('Semua data berhasil dihapus'); }
+    else { lastMonitorData = snapshot; renderMonitorLists(); alert('Gagal reset: ' + (result.error || 'unknown')); }
+  } catch(err){
+    lastMonitorData = snapshot; renderMonitorLists();
+    alert('Tidak bisa menghubungi spreadsheet.');
+  } finally {
+    btn.textContent = 'Hapus Semua';
+    btn.disabled = !document.getElementById('resetCheckbox').checked;
+  }
+}
+
+let pollTimer = null;
+function startMonitor(){
+  renderMonitor();
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(renderMonitor, POLL_MS);
+}
+function forceSyncNow(){ if(sessionStorage.getItem('monUnlocked') === '1') renderMonitor(); }
+document.addEventListener('visibilitychange', () => { if(!document.hidden) forceSyncNow(); });
+window.addEventListener('focus', forceSyncNow);
+window.addEventListener('pageshow', forceSyncNow);
+window.addEventListener('online', forceSyncNow);
+
+checkAccess();
+</script>
+</body>
+</html>
